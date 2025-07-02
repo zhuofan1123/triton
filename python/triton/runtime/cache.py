@@ -8,6 +8,22 @@ import hashlib
 
 from .. import knobs
 
+from pathlib import Path
+
+def get_home_dir():
+    return os.getenv("TRITON_HOME", Path.home())
+
+
+def default_cache_dir():
+    return os.path.join(get_home_dir(), ".triton", "cache")
+
+
+def default_override_dir():
+    return os.path.join(get_home_dir(), ".triton", "override")
+
+
+def default_dump_dir():
+    return os.path.join(get_home_dir(), ".triton", "dump")
 
 class CacheManager(ABC):
 
