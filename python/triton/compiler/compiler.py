@@ -128,6 +128,40 @@ class IRSource:
             return {'num_warps': num_warps}
         return dict()
 
+@functools.lru_cache()
+def triton_key():
+    import pkgutil
+    TRITON_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    contents = []
+    # frontend
+    with open(__file__, "rb") as f:
+        contents += [hashlib.sha256(f.read()).hexdigest()]
+    # compiler
+    path_prefixes = [
+        (os.path.join(TRITON_PATH, "compiler"), "triton.compiler."),
+        (os.path.join(TRITON_PATH, "backends"), "triton.backends."),
+    ]
+    for path, prefix in path_prefixes:
+        for lib in pkgutil.walk_packages([path], prefix=prefix):
+            with open(lib.module_finder.find_spec(lib.name).origin, "rb") as f:
+                contents += [hashlib.sha256(f.read()).hexdigest()]
+
+    # backend
+    libtriton_hash = hashlib.sha256()
+    ext = sysconfig.get_config_var("EXT_SUFFIX").split(".")[-1]
+    with open(os.path.join(TRITON_PATH, "_C", f"libtriton.{ext}"), "rb") as f:
+        while True:
+            chunk = f.read(1024**2)
+            if not chunk:
+                break
+            libtriton_hash.update(chunk)
+    contents.append(libtriton_hash.hexdigest())
+    # language
+    language_path = os.path.join(TRITON_PATH, 'language')
+    for lib in pkgutil.walk_packages([language_path], prefix="triton.language."):
+        with open(lib.module_finder.find_spec(lib.name).origin, "rb") as f:
+            contents += [hashlib.sha256(f.read()).hexdigest()]
+    return f'{__version__}' + '-'.join(contents)
 
 @functools.lru_cache()
 def triton_key():
